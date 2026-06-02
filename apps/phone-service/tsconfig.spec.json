@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/apps/phone-service"
+  },
+  "include": ["src/**/*", "test/**/*"]
+}

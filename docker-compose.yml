@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: mobigenie-api-gateway
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq        # removed mongodb dependency
+    networks:
+      - mobigenie-network
+    restart: unless-stopped
+
+  query-service:
+    build:
+      context: .
+      dockerfile: apps/query-service/Dockerfile
+    container_name: mobigenie-query-service
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+    networks:
+      - mobigenie-network
+    restart: unless-stopped
+
+  phone-service:
+    build:
+      context: .
+      dockerfile: apps/phone-service/Dockerfile
+    container_name: mobigenie-phone-service
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+    networks:
+      - mobigenie-network
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: apps/ai-service/Dockerfile
+    container_name: mobigenie-ai-service
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+    networks:
+      - mobigenie-network
+    restart: unless-stopped
+
+  # ─── NO MongoDB here — using Atlas ───
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: mobigenie-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+      - "15692:15692"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - mobigenie-network
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mobigenie-prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - mobigenie-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mobigenie-grafana
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - mobigenie-network
+    restart: unless-stopped
+
+volumes:
+  rabbitmq_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  mobigenie-network:
+    driver: bridge
