@@ -10,6 +10,12 @@ export const PHONE_FIND_BY_ID = 'phone.findById' as const;
 export const PHONE_SEARCH = 'phone.search' as const;
 export const PHONE_COMPARE = 'phone.compare' as const;
 
+// Admin Phone Message Patterns
+export const PHONE_CREATE = 'phone.create' as const;
+export const PHONE_UPDATE = 'phone.update' as const;
+export const PHONE_DELETE = 'phone.delete' as const;
+export const PHONE_FIND_ALL = 'phone.findAll' as const;
+
 // Message Patterns — AI Service
 export const AI_SUGGEST = 'ai.suggest' as const;
 export const AI_SUGGEST_STREAM = 'ai.suggest.stream' as const;

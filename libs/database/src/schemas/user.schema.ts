@@ -26,6 +26,12 @@ export class User {
   @Prop({ type: String, default: null })
   refreshToken!: string | null;
 
+  @Prop({ type: String, default: null })
+  otp!: string | null;
+
+  @Prop({ type: Date, default: null })
+  otpExpiry!: Date | null;
+
   createdAt!: Date;
   updatedAt!: Date;
 }

@@ -16,8 +16,8 @@ import { HealthModule } from './health/health.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     ThrottlerModule.forRoot([
-      { name: 'auth', ttl: 60000, limit: 10 }, // 10 auth requests per minute
-      { name: 'default', ttl: 60000, limit: 100 }, // 100 req/min for everything else
+      { name: 'auth', ttl: 60000, limit: 20 }, // 20 auth requests per minute
+      { name: 'default', ttl: 60000, limit: 300 }, // 300 req/min for everything else
     ]),
     AuthModule,
     DatabaseModule,

@@ -6,8 +6,9 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Patch,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from '../services/auth.service';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
@@ -53,6 +54,7 @@ export class AuthController {
       data: result,
     };
   }
+  @SkipThrottle()
   @UseGuards(RefreshGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -67,6 +69,7 @@ export class AuthController {
       data: result,
     };
   }
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
@@ -84,6 +87,7 @@ export class AuthController {
     return { message: 'Google login successful', data: result };
   }
 
+  @SkipThrottle()
   @UseGuards(JwtAuthGuard)
   @Get('me')
   @HttpCode(HttpStatus.OK)
@@ -93,5 +97,48 @@ export class AuthController {
       message: 'User profile retrieved successfully',
       data: result,
     };
+  }
+
+  @Throttle({ auth: { ttl: 60000, limit: 20 } })
+  @Post('send-otp')
+  @HttpCode(HttpStatus.OK)
+  async sendOtp(@Body('email') email: string) {
+    const result = await this.authService.sendVerificationOtp(email);
+    return result;
+  }
+
+  @Throttle({ auth: { ttl: 60000, limit: 20 } })
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  async verifyOtp(@Body('email') email: string, @Body('otp') otp: string) {
+    const result = await this.authService.verifyEmail(email, otp);
+    return result;
+  }
+
+  @Throttle({ auth: { ttl: 60000, limit: 20 } })
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body('email') email: string) {
+    const result = await this.authService.sendForgotPasswordOtp(email);
+    return result;
+  }
+
+  @Throttle({ auth: { ttl: 60000, limit: 20 } })
+  @Post('verify-reset-otp')
+  @HttpCode(HttpStatus.OK)
+  async verifyResetOtp(@Body('email') email: string, @Body('otp') otp: string) {
+    const result = await this.authService.verifyForgotPasswordOtp(email, otp);
+    return result;
+  }
+
+  @Throttle({ auth: { ttl: 60000, limit: 20 } })
+  @Patch('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(
+    @Body('email') email: string,
+    @Body('password') password: string,
+  ) {
+    const result = await this.authService.resetPassword(email, password);
+    return result;
   }
 }

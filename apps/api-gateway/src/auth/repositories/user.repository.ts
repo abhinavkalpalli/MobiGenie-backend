@@ -36,4 +36,37 @@ export class UserRepository extends BaseRepository<User> {
       { new: true },
     ).exec() as Promise<Doc<User> | null>;
   }
+
+  async findAllUsers(page: number = 1, limit: number = 20): Promise<{ data: Doc<User>[]; total: number; page: number; limit: number }> {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.userModel.find().select('-password -refreshToken').skip(skip).limit(limit).sort({ createdAt: -1 }).exec() as Promise<Doc<User>[]>,
+      this.userModel.countDocuments().exec(),
+    ]);
+    return { data, total, page, limit };
+  }
+
+  async saveOtp(userId: string, otp: string, expiry: Date): Promise<Doc<User> | null> {
+    return this.userModel.findByIdAndUpdate(userId, { otp, otpExpiry: expiry }, { new: true }).exec() as Promise<Doc<User> | null>;
+  }
+
+  async clearOtp(userId: string): Promise<void> {
+    await this.userModel.findByIdAndUpdate(userId, { otp: null, otpExpiry: null }).exec();
+  }
+
+  async markVerified(userId: string): Promise<Doc<User> | null> {
+    return this.userModel.findByIdAndUpdate(userId, { isVerified: true, otp: null, otpExpiry: null }, { new: true }).exec() as Promise<Doc<User> | null>;
+  }
+
+  async updatePassword(userId: string, hashedPassword: string): Promise<Doc<User> | null> {
+    return this.userModel.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true }).exec() as Promise<Doc<User> | null>;
+  }
+
+  async updateRole(userId: string, role: string): Promise<Doc<User> | null> {
+    return this.userModel.findByIdAndUpdate(userId, { role }, { new: true }).select('-password -refreshToken').exec() as Promise<Doc<User> | null>;
+  }
+
+  async deleteUser(userId: string): Promise<Doc<User> | null> {
+    return this.userModel.findByIdAndDelete(userId).exec() as Promise<Doc<User> | null>;
+  }
 }

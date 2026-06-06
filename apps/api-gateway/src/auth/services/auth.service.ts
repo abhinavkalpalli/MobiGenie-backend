@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -13,6 +13,7 @@ import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { MetricsService } from '../../metrics/metrics.service';
+import { MailService } from './mail.service';
 @Injectable()
 export class AuthService {
   constructor(
@@ -20,6 +21,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly metricsService: MetricsService,
+    private readonly mailService: MailService,
   ) {}
   async register(registerDto: RegisterDto) {
     const existingUser = await this.userRepository.findByEmail(
@@ -35,11 +37,7 @@ export class AuthService {
       password: hashedPassword,
     });
     const userId = (user._id as { toString(): string }).toString();
-    const tokens = await this.generateTokens(
-      userId,
-      user.email as string,
-      user.role as string,
-    );
+    const tokens = await this.generateTokens(userId, user.email, user.role);
 
     await this.userRepository.updateRefreshToken(userId, tokens.refreshToken);
     this.metricsService.recordAuthEvent('register');
@@ -72,11 +70,7 @@ export class AuthService {
       throw new UnauthorizedAccessException('Invalid credentials');
     }
     const userId = (user._id as { toString(): string }).toString();
-    const tokens = await this.generateTokens(
-      userId,
-      user.email as string,
-      user.role as string,
-    );
+    const tokens = await this.generateTokens(userId, user.email, user.role);
 
     await this.userRepository.updateRefreshToken(userId, tokens.refreshToken);
     this.metricsService.recordAuthEvent('login');
@@ -171,11 +165,7 @@ export class AuthService {
       );
 
     const userId = (user._id as { toString(): string }).toString();
-    const tokens = await this.generateTokens(
-      userId,
-      user.email as string,
-      user.role as string,
-    );
+    const tokens = await this.generateTokens(userId, user.email, user.role);
     await this.userRepository.updateRefreshToken(userId, tokens.refreshToken);
     this.metricsService.recordAuthEvent('login');
 
@@ -183,6 +173,104 @@ export class AuthService {
       user: { id: userId, name: user.name, email: user.email, role: user.role },
       ...tokens,
     };
+  }
+
+  async adminGetUsers(page: number = 1, limit: number = 20) {
+    return await this.userRepository.findAllUsers(page, limit);
+  }
+
+  async adminUpdateRole(userId: string, role: string) {
+    if (!['user', 'admin'].includes(role)) {
+      throw new UnauthorizedAccessException('Invalid role');
+    }
+    const user = await this.userRepository.updateRole(userId, role);
+    if (!user) throw new ResourceNotFoundException('User');
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+  }
+
+  async adminDeleteUser(userId: string) {
+    const user = await this.userRepository.deleteUser(userId);
+    if (!user) throw new ResourceNotFoundException('User');
+    return { deleted: true, id: userId };
+  }
+
+  private generateOtp(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  async sendVerificationOtp(email: string) {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) throw new ResourceNotFoundException('User');
+    if (user.isVerified)
+      throw new BadRequestException('Email already verified');
+
+    const otp = this.generateOtp();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000);
+    await this.userRepository.saveOtp(
+      (user._id as any).toString(),
+      otp,
+      expiry,
+    );
+    await this.mailService.sendOtp(email, otp, 'verify');
+    return { message: 'OTP sent to your email' };
+  }
+
+  async verifyEmail(email: string, otp: string) {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) throw new ResourceNotFoundException('User');
+    if (user.isVerified)
+      throw new BadRequestException('Email already verified');
+    if (!user.otp || user.otp !== otp)
+      throw new BadRequestException('Invalid OTP');
+    if (!user.otpExpiry || user.otpExpiry < new Date())
+      throw new BadRequestException('OTP expired');
+
+    await this.userRepository.markVerified((user._id as any).toString());
+    return { message: 'Email verified successfully' };
+  }
+
+  async sendForgotPasswordOtp(email: string) {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) throw new ResourceNotFoundException('User');
+
+    const otp = this.generateOtp();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000);
+    await this.userRepository.saveOtp(
+      (user._id as any).toString(),
+      otp,
+      expiry,
+    );
+    await this.mailService.sendOtp(email, otp, 'reset');
+    return { message: 'OTP sent to your email' };
+  }
+
+  async verifyForgotPasswordOtp(email: string, otp: string) {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) throw new ResourceNotFoundException('User');
+    if (!user.otp || user.otp !== otp)
+      throw new BadRequestException('Invalid OTP');
+    if (!user.otpExpiry || user.otpExpiry < new Date())
+      throw new BadRequestException('OTP expired');
+
+    await this.userRepository.clearOtp((user._id as any).toString());
+    return { message: 'OTP verified' };
+  }
+
+  async resetPassword(email: string, newPassword: string) {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) throw new ResourceNotFoundException('User');
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.userRepository.updatePassword(
+      (user._id as any).toString(),
+      hashed,
+    );
+    return { message: 'Password reset successfully' };
   }
 
   private async generateTokens(userId: string, email: string, role: string) {

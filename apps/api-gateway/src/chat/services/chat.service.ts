@@ -355,10 +355,11 @@ export class ChatService {
                 });
               }
               if (payload.done) {
+                const recommendedIds: string[] = payload.recommendedIds ?? [];
                 subscriber.next({
                   data: {
                     done: true,
-                    recommendedIds: payload.recommendedIds ?? [],
+                    recommendedIds,
                   },
                 });
                 // Save both user and assistant messages fire-and-forget
@@ -384,7 +385,7 @@ export class ChatService {
                         name: p.name,
                         price: p.price?.current,
                         image: p.image,
-                        matchScore: 1.0,
+                        matchScore: recommendedIds.includes(String(p._id)) ? 1.0 : 0.5,
                       })),
                   });
                 }

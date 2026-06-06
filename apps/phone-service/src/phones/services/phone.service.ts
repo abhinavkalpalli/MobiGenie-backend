@@ -68,4 +68,28 @@ export class PhoneService {
   async findAll(page: number = 1, limit: number = 10) {
     return await this.phoneRepository.paginate({}, page, limit);
   }
+
+  // ─── Admin: Create Phone ─────────────────────
+  async create(data: any) {
+    const phone = await this.phoneRepository.create(data);
+    return phone;
+  }
+
+  // ─── Admin: Update Phone ─────────────────────
+  async update(id: string, updates: any) {
+    const phone = await this.phoneRepository.update(id, updates);
+    if (!phone) {
+      throw new ResourceNotFoundException(`Phone with id ${id}`);
+    }
+    return phone;
+  }
+
+  // ─── Admin: Delete Phone ─────────────────────
+  async delete(id: string) {
+    const phone = await this.phoneRepository.delete(id);
+    if (!phone) {
+      throw new ResourceNotFoundException(`Phone with id ${id}`);
+    }
+    return { deleted: true, id };
+  }
 }

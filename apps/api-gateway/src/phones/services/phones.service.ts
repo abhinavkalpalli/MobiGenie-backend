@@ -14,6 +14,10 @@ import {
   PHONE_FIND_BY_ID,
   PHONE_SEARCH,
   PHONE_COMPARE,
+  PHONE_CREATE,
+  PHONE_UPDATE,
+  PHONE_DELETE,
+  PHONE_FIND_ALL,
 } from '@app/common';
 import { FilterPhoneDto } from '../dto/filter-phone.dto';
 
@@ -107,6 +111,58 @@ export class PhonesService {
             throw new RequestTimeoutException('Phone service timeout');
           }
           toHttpError(err, 'compare');
+          throw err;
+        }),
+      ),
+    );
+  }
+
+  async findAllAdmin(page: number = 1, limit: number = 10) {
+    return firstValueFrom(
+      this.phoneClient.send(PHONE_FIND_ALL, { page, limit }).pipe(
+        timeout(10000),
+        catchError((err) => {
+          if (err instanceof TimeoutError) throw new RequestTimeoutException('Phone service timeout');
+          toHttpError(err, 'findAllAdmin');
+          throw err;
+        }),
+      ),
+    );
+  }
+
+  async createPhone(data: any) {
+    return firstValueFrom(
+      this.phoneClient.send(PHONE_CREATE, data).pipe(
+        timeout(10000),
+        catchError((err) => {
+          if (err instanceof TimeoutError) throw new RequestTimeoutException('Phone service timeout');
+          toHttpError(err, 'createPhone');
+          throw err;
+        }),
+      ),
+    );
+  }
+
+  async updatePhone(id: string, updates: any) {
+    return firstValueFrom(
+      this.phoneClient.send(PHONE_UPDATE, { id, updates }).pipe(
+        timeout(10000),
+        catchError((err) => {
+          if (err instanceof TimeoutError) throw new RequestTimeoutException('Phone service timeout');
+          toHttpError(err, 'updatePhone');
+          throw err;
+        }),
+      ),
+    );
+  }
+
+  async deletePhone(id: string) {
+    return firstValueFrom(
+      this.phoneClient.send(PHONE_DELETE, { id }).pipe(
+        timeout(10000),
+        catchError((err) => {
+          if (err instanceof TimeoutError) throw new RequestTimeoutException('Phone service timeout');
+          toHttpError(err, 'deletePhone');
           throw err;
         }),
       ),

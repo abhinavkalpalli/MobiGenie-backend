@@ -8,6 +8,10 @@ import {
   PHONE_FIND_BY_ID,
   PHONE_SEARCH,
   PHONE_COMPARE,
+  PHONE_CREATE,
+  PHONE_UPDATE,
+  PHONE_DELETE,
+  PHONE_FIND_ALL,
 } from '@app/common';
 
 @Controller()
@@ -47,5 +51,29 @@ export class PhoneController {
   compare(@Payload() data: { ids: string[] }) {
     this.logger.log(`Message received: ${PHONE_COMPARE}`);
     return this.phoneService.compare(data.ids);
+  }
+
+  @MessagePattern(PHONE_FIND_ALL)
+  findAll(@Payload() data: { page?: number; limit?: number }) {
+    this.logger.log(`Message received: ${PHONE_FIND_ALL}`);
+    return this.phoneService.findAll(data.page, data.limit);
+  }
+
+  @MessagePattern(PHONE_CREATE)
+  create(@Payload() data: any) {
+    this.logger.log(`Message received: ${PHONE_CREATE}`);
+    return this.phoneService.create(data);
+  }
+
+  @MessagePattern(PHONE_UPDATE)
+  update(@Payload() data: { id: string; updates: any }) {
+    this.logger.log(`Message received: ${PHONE_UPDATE}`);
+    return this.phoneService.update(data.id, data.updates);
+  }
+
+  @MessagePattern(PHONE_DELETE)
+  delete(@Payload() data: { id: string }) {
+    this.logger.log(`Message received: ${PHONE_DELETE}`);
+    return this.phoneService.delete(data.id);
   }
 }
