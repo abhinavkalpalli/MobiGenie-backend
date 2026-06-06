@@ -6,22 +6,21 @@ import { Logger } from '@nestjs/common';
 async function bootstrap() {
   const logger = new Logger('AiService');
 
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    AiServiceModule,
-    {
-      transport: Transport.RMQ,
-      options: {
-        urls: [
-          process.env.RABBITMQ_URI || 'amqp://admin:password@localhost:5672',
-        ],
-        queue: process.env.RABBITMQ_AI_QUEUE || 'ai_queue',
-        queueOptions: { durable: true },
-        noAck: false,
-      },
-    },
-  );
+  const app = await NestFactory.create(AiServiceModule);
 
-  await app.listen();
-  logger.log('🤖 AI Service running on ai_queue');
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [process.env.RABBITMQ_URI || 'amqp://admin:password@localhost:5672'],
+      queue: process.env.RABBITMQ_AI_QUEUE || 'ai_queue',
+      queueOptions: { durable: true },
+      noAck: false,
+    },
+  });
+
+  await app.startAllMicroservices();
+  const port = process.env.PORT || 3002;
+  await app.listen(port);
+  logger.log(`AI Service running on port ${port}`);
 }
 void bootstrap();
