@@ -32,6 +32,9 @@ export class User {
   @Prop({ type: Date, default: null })
   otpExpiry!: Date | null;
 
+  @Prop({ type: Number, default: 0 })
+  tokenVersion!: number;
+
   createdAt!: Date;
   updatedAt!: Date;
 }

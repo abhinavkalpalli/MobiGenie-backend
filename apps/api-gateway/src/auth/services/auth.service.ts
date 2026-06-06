@@ -70,7 +70,8 @@ export class AuthService {
       throw new UnauthorizedAccessException('Invalid credentials');
     }
     const userId = (user._id as { toString(): string }).toString();
-    const tokens = await this.generateTokens(userId, user.email, user.role);
+    const tokenVersion = await this.userRepository.incrementTokenVersion(userId);
+    const tokens = await this.generateTokens(userId, user.email, user.role, tokenVersion);
 
     await this.userRepository.updateRefreshToken(userId, tokens.refreshToken);
     this.metricsService.recordAuthEvent('login');
@@ -165,7 +166,8 @@ export class AuthService {
       );
 
     const userId = (user._id as { toString(): string }).toString();
-    const tokens = await this.generateTokens(userId, user.email, user.role);
+    const tokenVersion = await this.userRepository.incrementTokenVersion(userId);
+    const tokens = await this.generateTokens(userId, user.email, user.role, tokenVersion);
     await this.userRepository.updateRefreshToken(userId, tokens.refreshToken);
     this.metricsService.recordAuthEvent('login');
 
@@ -273,8 +275,8 @@ export class AuthService {
     return { message: 'Password reset successfully' };
   }
 
-  private async generateTokens(userId: string, email: string, role: string) {
-    const payload: JwtPayload = { sub: userId, email, role };
+  private async generateTokens(userId: string, email: string, role: string, tokenVersion = 0) {
+    const payload: JwtPayload = { sub: userId, email, role, tokenVersion };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_SECRET'),

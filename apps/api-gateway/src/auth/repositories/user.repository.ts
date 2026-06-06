@@ -69,4 +69,11 @@ export class UserRepository extends BaseRepository<User> {
   async deleteUser(userId: string): Promise<Doc<User> | null> {
     return this.userModel.findByIdAndDelete(userId).exec() as Promise<Doc<User> | null>;
   }
+
+  async incrementTokenVersion(userId: string): Promise<number> {
+    const user = await this.userModel
+      .findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } }, { new: true })
+      .exec();
+    return user?.tokenVersion ?? 0;
+  }
 }
