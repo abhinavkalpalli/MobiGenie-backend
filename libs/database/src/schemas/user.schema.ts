@@ -35,6 +35,12 @@ export class User {
   @Prop({ type: Number, default: 0 })
   tokenVersion!: number;
 
+  @Prop({ type: Number, default: 0 })
+  loginAttempts!: number;
+
+  @Prop({ type: Date, default: null })
+  lockUntil!: Date | null;
+
   createdAt!: Date;
   updatedAt!: Date;
 }

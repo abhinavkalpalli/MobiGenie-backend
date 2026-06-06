@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcryptjs';
 import { UserRepository } from '../repositories/user.repository';
 
 @Injectable()
@@ -26,10 +27,17 @@ export class RefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token not found');
     }
-    const user = await this.userRepository.findByRefreshToken(refreshToken);
-    if (!user) {
+
+    // Verify hashed refresh token directly against stored hash for this user
+    const user = await this.userRepository.findById(payload.sub);
+    if (!user || !user.refreshToken) {
       throw new UnauthorizedException('Invalid refresh token');
     }
+    const isValid = await bcrypt.compare(refreshToken, user.refreshToken);
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
     return {
       userId: payload.sub,
       email: payload.email,

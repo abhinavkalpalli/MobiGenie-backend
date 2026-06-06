@@ -9,7 +9,9 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { AuthService } from '../services/auth.service';
 import { JwtAuthGuard } from '../guards/jwt.guard';
 import { RolesGuard } from '../guards/roles.guard';
@@ -33,8 +35,12 @@ export class AdminController {
 
   @Put('users/:id/role')
   @HttpCode(HttpStatus.OK)
-  async updateUserRole(@Param('id') id: string, @Body('role') role: string) {
-    const result = await this.authService.adminUpdateRole(id, role);
+  async updateUserRole(
+    @Param('id') id: string,
+    @Body('role') role: string,
+    @Req() req: Request & { user: { userId: string } },
+  ) {
+    const result = await this.authService.adminUpdateRole(id, role, req.user.userId);
     return { message: 'User role updated successfully', data: result };
   }
 

@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { ApiGatewayModule } from './api-gateway.module';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 import { AllExceptionsFilter } from './filters/all-exception.filter';
@@ -13,6 +14,9 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const config = app.get(ConfigService);
   const port = config.get<number>('API_GATEWAY_PORT') || 3000;
+
+  // ─── Security Headers ────────────────────────
+  app.use(helmet());
 
   // ─── Global Validation ───────────────────────
   app.useGlobalPipes(

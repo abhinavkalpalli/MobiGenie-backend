@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { randomInt } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -57,6 +58,15 @@ export class AuthService {
     if (!user) {
       throw new ResourceNotFoundException('User');
     }
+
+    // Account lockout check
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      const minutesLeft = Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000);
+      throw new UnauthorizedAccessException(
+        `Account locked. Try again in ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}.`,
+      );
+    }
+
     if (!user.password) {
       throw new UnauthorizedAccessException(
         'This account uses Google sign-in. Please continue with Google.',
@@ -67,9 +77,13 @@ export class AuthService {
       user.password,
     );
     if (!isPasswordValid) {
+      await this.userRepository.incrementLoginAttempts(
+        (user._id as { toString(): string }).toString(),
+      );
       throw new UnauthorizedAccessException('Invalid credentials');
     }
     const userId = (user._id as { toString(): string }).toString();
+    await this.userRepository.resetLoginAttempts(userId);
     const tokenVersion = await this.userRepository.incrementTokenVersion(userId);
     const tokens = await this.generateTokens(userId, user.email, user.role, tokenVersion);
 
@@ -181,9 +195,12 @@ export class AuthService {
     return await this.userRepository.findAllUsers(page, limit);
   }
 
-  async adminUpdateRole(userId: string, role: string) {
+  async adminUpdateRole(userId: string, role: string, requestingAdminId: string) {
     if (!['user', 'admin'].includes(role)) {
       throw new UnauthorizedAccessException('Invalid role');
+    }
+    if (userId === requestingAdminId) {
+      throw new UnauthorizedAccessException('You cannot change your own role');
     }
     const user = await this.userRepository.updateRole(userId, role);
     if (!user) throw new ResourceNotFoundException('User');
@@ -202,7 +219,7 @@ export class AuthService {
   }
 
   private generateOtp(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return randomInt(100000, 1000000).toString();
   }
 
   async sendVerificationOtp(email: string) {
@@ -260,18 +277,34 @@ export class AuthService {
       throw new BadRequestException('OTP expired');
 
     await this.userRepository.clearOtp((user._id as any).toString());
-    return { message: 'OTP verified' };
+
+    // Issue a short-lived reset token — required to call resetPassword
+    const resetToken = await this.jwtService.signAsync(
+      { sub: (user._id as any).toString(), purpose: 'password-reset' },
+      { secret: this.configService.get<string>('JWT_SECRET'), expiresIn: '10m' },
+    );
+    return { message: 'OTP verified', resetToken };
   }
 
-  async resetPassword(email: string, newPassword: string) {
-    const user = await this.userRepository.findByEmail(email);
+  async resetPassword(resetToken: string, newPassword: string) {
+    let payload: { sub: string; purpose: string };
+    try {
+      payload = await this.jwtService.verifyAsync(resetToken, {
+        secret: this.configService.get<string>('JWT_SECRET'),
+      });
+    } catch {
+      throw new BadRequestException('Reset token is invalid or expired');
+    }
+    if (payload.purpose !== 'password-reset')
+      throw new BadRequestException('Invalid reset token');
+
+    const user = await this.userRepository.findById(payload.sub);
     if (!user) throw new ResourceNotFoundException('User');
 
     const hashed = await bcrypt.hash(newPassword, 10);
-    await this.userRepository.updatePassword(
-      (user._id as any).toString(),
-      hashed,
-    );
+    await this.userRepository.updatePassword(payload.sub, hashed);
+    // Invalidate all sessions after password reset
+    await this.userRepository.incrementTokenVersion(payload.sub);
     return { message: 'Password reset successfully' };
   }
 

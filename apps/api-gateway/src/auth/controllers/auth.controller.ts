@@ -135,10 +135,10 @@ export class AuthController {
   @Patch('reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(
-    @Body('email') email: string,
+    @Body('resetToken') resetToken: string,
     @Body('password') password: string,
   ) {
-    const result = await this.authService.resetPassword(email, password);
+    const result = await this.authService.resetPassword(resetToken, password);
     return result;
   }
 }
