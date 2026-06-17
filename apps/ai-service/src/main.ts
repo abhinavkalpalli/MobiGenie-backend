@@ -15,6 +15,7 @@ async function bootstrap() {
       queue: process.env.RABBITMQ_AI_QUEUE || 'ai_queue',
       queueOptions: { durable: true },
       noAck: false,
+      socketOptions: { heartbeatIntervalInSeconds: 30 },
     },
   });
 

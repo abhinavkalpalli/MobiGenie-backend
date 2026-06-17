@@ -14,6 +14,7 @@ async function bootstrap() {
       urls: [process.env.RABBITMQ_URI || 'amqp://admin:password@localhost:5672'],
       queue: process.env.RABBITMQ_QUERY_QUEUE || 'query_queue',
       queueOptions: { durable: true },
+      socketOptions: { heartbeatIntervalInSeconds: 30 },
     },
   });
 
@@ -24,6 +25,7 @@ async function bootstrap() {
       urls: [process.env.RABBITMQ_URI || 'amqp://admin:password@localhost:5672'],
       queue: process.env.RABBITMQ_PHONE_QUEUE || 'phone_queue',
       queueOptions: { durable: true },
+      socketOptions: { heartbeatIntervalInSeconds: 30 },
     },
   });
 
