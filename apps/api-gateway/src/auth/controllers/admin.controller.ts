@@ -40,7 +40,11 @@ export class AdminController {
     @Body('role') role: string,
     @Req() req: Request & { user: { userId: string } },
   ) {
-    const result = await this.authService.adminUpdateRole(id, role, req.user.userId);
+    const result = await this.authService.adminUpdateRole(
+      id,
+      role,
+      req.user.userId,
+    );
     return { message: 'User role updated successfully', data: result };
   }
 

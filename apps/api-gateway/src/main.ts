@@ -3,6 +3,7 @@ import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { ApiGatewayModule } from './api-gateway.module';
 import { HttpExceptionFilter } from './filters/http-exception.filter';
 import { AllExceptionsFilter } from './filters/all-exception.filter';
@@ -17,6 +18,9 @@ async function bootstrap() {
 
   // ─── Security Headers ────────────────────────
   app.use(helmet());
+
+  // ─── Cookie Parser ───────────────────────────
+  app.use(cookieParser());
 
   // ─── Global Validation ───────────────────────
   app.useGlobalPipes(
@@ -46,11 +50,13 @@ async function bootstrap() {
   );
 
   // ─── CORS ────────────────────────────────────
-  const corsOrigin = config.get<string>('CORS_ORIGIN') ?? '*';
+  const corsOrigin =
+    config.get<string>('CORS_ORIGIN') ?? 'http://localhost:3003';
   app.enableCors({
     origin: corsOrigin,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
+    credentials: true, // required for httpOnly cookies
+    allowedHeaders: 'Content-Type,Authorization',
   });
 
   // ─── Global Prefix ───────────────────────────

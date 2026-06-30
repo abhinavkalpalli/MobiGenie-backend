@@ -61,7 +61,9 @@ export class AuthService {
 
     // Account lockout check
     if (user.lockUntil && user.lockUntil > new Date()) {
-      const minutesLeft = Math.ceil((user.lockUntil.getTime() - Date.now()) / 60000);
+      const minutesLeft = Math.ceil(
+        (user.lockUntil.getTime() - Date.now()) / 60000,
+      );
       throw new UnauthorizedAccessException(
         `Account locked. Try again in ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}.`,
       );
@@ -84,8 +86,14 @@ export class AuthService {
     }
     const userId = (user._id as { toString(): string }).toString();
     await this.userRepository.resetLoginAttempts(userId);
-    const tokenVersion = await this.userRepository.incrementTokenVersion(userId);
-    const tokens = await this.generateTokens(userId, user.email, user.role, tokenVersion);
+    const tokenVersion =
+      await this.userRepository.incrementTokenVersion(userId);
+    const tokens = await this.generateTokens(
+      userId,
+      user.email,
+      user.role,
+      tokenVersion,
+    );
 
     await this.userRepository.updateRefreshToken(userId, tokens.refreshToken);
     this.metricsService.recordAuthEvent('login');
@@ -180,8 +188,14 @@ export class AuthService {
       );
 
     const userId = (user._id as { toString(): string }).toString();
-    const tokenVersion = await this.userRepository.incrementTokenVersion(userId);
-    const tokens = await this.generateTokens(userId, user.email, user.role, tokenVersion);
+    const tokenVersion =
+      await this.userRepository.incrementTokenVersion(userId);
+    const tokens = await this.generateTokens(
+      userId,
+      user.email,
+      user.role,
+      tokenVersion,
+    );
     await this.userRepository.updateRefreshToken(userId, tokens.refreshToken);
     this.metricsService.recordAuthEvent('login');
 
@@ -195,7 +209,11 @@ export class AuthService {
     return await this.userRepository.findAllUsers(page, limit);
   }
 
-  async adminUpdateRole(userId: string, role: string, requestingAdminId: string) {
+  async adminUpdateRole(
+    userId: string,
+    role: string,
+    requestingAdminId: string,
+  ) {
     if (!['user', 'admin'].includes(role)) {
       throw new UnauthorizedAccessException('Invalid role');
     }
@@ -281,7 +299,10 @@ export class AuthService {
     // Issue a short-lived reset token — required to call resetPassword
     const resetToken = await this.jwtService.signAsync(
       { sub: (user._id as any).toString(), purpose: 'password-reset' },
-      { secret: this.configService.get<string>('JWT_SECRET'), expiresIn: '10m' },
+      {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        expiresIn: '10m',
+      },
     );
     return { message: 'OTP verified', resetToken };
   }
@@ -308,7 +329,12 @@ export class AuthService {
     return { message: 'Password reset successfully' };
   }
 
-  private async generateTokens(userId: string, email: string, role: string, tokenVersion = 0) {
+  private async generateTokens(
+    userId: string,
+    email: string,
+    role: string,
+    tokenVersion = 0,
+  ) {
     const payload: JwtPayload = { sub: userId, email, role, tokenVersion };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {

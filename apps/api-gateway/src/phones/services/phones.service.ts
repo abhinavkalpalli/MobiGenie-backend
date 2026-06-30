@@ -122,7 +122,8 @@ export class PhonesService {
       this.phoneClient.send(PHONE_FIND_ALL, { page, limit }).pipe(
         timeout(10000),
         catchError((err) => {
-          if (err instanceof TimeoutError) throw new RequestTimeoutException('Phone service timeout');
+          if (err instanceof TimeoutError)
+            throw new RequestTimeoutException('Phone service timeout');
           toHttpError(err, 'findAllAdmin');
           throw err;
         }),
@@ -135,7 +136,8 @@ export class PhonesService {
       this.phoneClient.send(PHONE_CREATE, data).pipe(
         timeout(10000),
         catchError((err) => {
-          if (err instanceof TimeoutError) throw new RequestTimeoutException('Phone service timeout');
+          if (err instanceof TimeoutError)
+            throw new RequestTimeoutException('Phone service timeout');
           toHttpError(err, 'createPhone');
           throw err;
         }),
@@ -148,7 +150,8 @@ export class PhonesService {
       this.phoneClient.send(PHONE_UPDATE, { id, updates }).pipe(
         timeout(10000),
         catchError((err) => {
-          if (err instanceof TimeoutError) throw new RequestTimeoutException('Phone service timeout');
+          if (err instanceof TimeoutError)
+            throw new RequestTimeoutException('Phone service timeout');
           toHttpError(err, 'updatePhone');
           throw err;
         }),
@@ -161,7 +164,8 @@ export class PhonesService {
       this.phoneClient.send(PHONE_DELETE, { id }).pipe(
         timeout(10000),
         catchError((err) => {
-          if (err instanceof TimeoutError) throw new RequestTimeoutException('Phone service timeout');
+          if (err instanceof TimeoutError)
+            throw new RequestTimeoutException('Phone service timeout');
           toHttpError(err, 'deletePhone');
           throw err;
         }),

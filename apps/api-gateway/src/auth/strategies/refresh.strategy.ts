@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { UserRepository } from '../repositories/user.repository';
+import { Request } from 'express';
 
 @Injectable()
 export class RefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
@@ -12,17 +13,17 @@ export class RefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
     private userRepository: UserRepository,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        (req: Request) => req?.cookies?.refreshToken ?? null,
+      ]),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_REFRESH_SECRET') ?? '',
       passReqToCallback: true,
     });
   }
 
-  async validate(req: { headers: { authorization?: string } }, payload: any) {
-    const refreshToken = req.headers.authorization
-      ?.replace('Bearer ', '')
-      .trim();
+  async validate(req: Request, payload: any) {
+    const refreshToken = req?.cookies?.refreshToken as string | undefined;
 
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token not found');
