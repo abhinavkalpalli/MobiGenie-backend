@@ -59,7 +59,7 @@ export class AuthController {
 
   private clearAuthCookies(res: Response) {
     const isProduction = process.env.NODE_ENV === 'production';
-    const sameSite = isProduction ? 'none' : 'strict';
+    const sameSite = (isProduction ? 'none' : 'strict') as 'none' | 'strict';
     const options = { httpOnly: true, secure: isProduction, sameSite };
     res.clearCookie('accessToken', options);
     res.clearCookie('refreshToken', options);
