@@ -40,17 +40,20 @@ export class AuthController {
     refreshToken: string,
   ) {
     const isProduction = process.env.NODE_ENV === 'production';
+    // sameSite: 'none' is required for cross-domain cookies in production
+    // (frontend on vercel.app, backend on onrender.com)
+    const sameSite = isProduction ? 'none' : 'strict';
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      sameSite,
+      maxAge: 15 * 60 * 1000,
     });
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      sameSite,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
 
