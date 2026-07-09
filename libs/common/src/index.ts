@@ -7,3 +7,6 @@ export * from './dto/response.dto';
 export * from './dto/pagination.dto';
 
 export * from './exceptions/custom.exceptions';
+
+// Utils
+export * from './utils/guest-cookie.util';

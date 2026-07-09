@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '../guards/jwt.guard';
 import { RefreshGuard } from '../guards/refresh.guard';
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { Response } from 'express';
+import { setGuestAccessCookie } from '@app/common';
 
 export const CurrentUser = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
@@ -28,6 +29,9 @@ export interface JwtUser {
   userId: string;
   email: string;
   roles: string;
+  isGuest?: boolean;
+  sessionCount?: number;
+  messageCount?: number;
 }
 
 @Controller('auth')
@@ -114,10 +118,24 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@CurrentUser() user: JwtUser, @Res({ passthrough: true }) res: Response) {
-    await this.authService.logout(user.userId);
+    if (!user.isGuest) {
+      await this.authService.logout(user.userId);
+    }
     this.clearAuthCookies(res);
     return {
       message: 'User logged out successfully',
+    };
+  }
+
+  @Throttle({ auth: { ttl: 60000, limit: 10 } })
+  @Post('guest')
+  @HttpCode(HttpStatus.OK)
+  async guestLogin(@Res({ passthrough: true }) res: Response) {
+    const result = this.authService.guestLogin();
+    setGuestAccessCookie(res, result.accessToken);
+    return {
+      message: 'Guest session started',
+      data: result.user,
     };
   }
 
@@ -136,6 +154,12 @@ export class AuthController {
   @Get('me')
   @HttpCode(HttpStatus.OK)
   async getProfile(@CurrentUser() user: JwtUser) {
+    if (user.isGuest) {
+      return {
+        message: 'Guest profile retrieved successfully',
+        data: { id: user.userId, name: 'Guest', email: null, role: 'guest', isGuest: true },
+      };
+    }
     const result = await this.authService.getProfile(user.userId);
     return {
       message: 'User profile retrieved successfully',

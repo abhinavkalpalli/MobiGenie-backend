@@ -157,8 +157,7 @@ export class AiService {
   // ─── Fallback Response ───────────────────────
   private buildFallbackResponse(query: string, phones: any[]): string {
     if (!phones || phones.length === 0) {
-      return `I couldn't find any phones matching "${query}". 
-              Try adjusting your budget or requirements!`;
+      return `Hi! I'm MobiGenie 🤖 — I help you find the right phone based on your budget, specs, or brand preferences. Tell me what you're looking for and I'll suggest some options!`;
     }
 
     const top3 = phones.slice(0, 3);

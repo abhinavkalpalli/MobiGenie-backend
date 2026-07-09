@@ -1,98 +1,101 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# MobiGenie — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS microservices backend for MobiGenie, an AI-powered phone recommendation chat assistant. Services communicate over RabbitMQ and share MongoDB (Atlas) as the primary datastore.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Architecture
 
-## Description
+This is an Nx-style NestJS monorepo (`nest-cli.json`, `monorepo: true`) with four deployable services and two shared libraries:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| App | Path | Responsibility |
+|---|---|---|
+| `api-gateway` | `apps/api-gateway` | Public HTTP API — auth, chat endpoints (incl. SSE streaming), phone catalog, admin routes, metrics. The only service exposed to the frontend. |
+| `query-service` | `apps/query-service` | Parses/classifies user queries, orchestrates phone search + AI suggestions, owns chat session/message history. |
+| `phone-service` | `apps/phone-service` | Phone catalog storage and search. |
+| `ai-service` | `apps/ai-service` | LLM calls (Groq/OpenAI via LangChain) and TensorFlow-based embedding/similarity for recommendations. |
 
-## Project setup
+| Lib | Path | Purpose |
+|---|---|---|
+| `@app/common` | `libs/common` | Shared constants, DTOs, custom exceptions, interceptors, utils. |
+| `@app/database` | `libs/database` | Mongoose schemas (`User`, `ChatSession`, `ChatMessage`, `Phone`, ...) and a generic `BaseRepository`. |
+| `@app/rabbitmq` | `libs/rabbitmq` | RabbitMQ client/transport helpers used by all services. |
 
-```bash
-$ npm install
-```
+Services talk to each other exclusively through RabbitMQ (`@nestjs/microservices`, `Transport.RMQ`) — `api-gateway` never talks to Mongo directly except for auth (`User` schema), and proxies everything else to the relevant service via message patterns/events.
 
-## Compile and run the project
+## Prerequisites
+
+- Node.js 20+
+- A running RabbitMQ instance (or use the provided `docker-compose.yml`)
+- A MongoDB connection string (Atlas or self-hosted)
+
+## Setup
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
+cp .env.example .env   # then fill in secrets — see below
 ```
 
-## Run tests
+### Environment variables (`.env`)
+
+| Variable | Description |
+|---|---|
+| `NODE_ENV` | `development` / `production` |
+| `API_GATEWAY_PORT` | Port the gateway listens on (default `3000`) |
+| `CORS_ORIGIN` | Allowed frontend origin, no trailing slash |
+| `JWT_SECRET` / `JWT_EXPIRES_IN` | Access token signing secret + TTL |
+| `JWT_REFRESH_SECRET` / `JWT_REFRESH_EXPIRES_IN` | Refresh token signing secret + TTL |
+| `MONGODB_URI` | MongoDB connection string |
+| `RABBITMQ_URI`, `RABBITMQ_USER`, `RABBITMQ_PASS` | Broker connection |
+| `RABBITMQ_QUERY_QUEUE`, `RABBITMQ_PHONE_QUEUE`, `RABBITMQ_AI_QUEUE` | Per-service queue names |
+| `GROQ_API_KEY` | Groq LLM API key |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID (Google Sign-In) |
+| `GRAFANA_*`, `PROMETHEUS_PORT` | Monitoring stack config (optional, see below) |
+
+Generate JWT secrets with:
+```bash
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+## Running
+
+### Via Docker Compose (all services + RabbitMQ + monitoring)
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+docker compose up --build
 ```
 
-## Deployment
+This starts `api-gateway`, `query-service`, `phone-service`, `ai-service`, RabbitMQ (with management UI), Prometheus, and Grafana. MongoDB is **not** included — point `MONGODB_URI` at Atlas or your own instance.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### Locally, per service
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Each service is a separate Nest project; run the one you need with `-p`:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npx nest start api-gateway --watch
+npx nest start query-service --watch
+npx nest start phone-service --watch
+npx nest start ai-service --watch
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+`npm run start:dev` (no `-p`) runs the default project configured in `nest-cli.json` (`api-gateway`).
 
-## Resources
+## Testing
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+npm run test        # unit tests
+npm run test:e2e     # e2e tests
+npm run test:cov     # coverage
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Key domains
 
-## Support
+- **Auth** (`apps/api-gateway/src/auth`) — email/password + Google OAuth login, JWT access/refresh tokens delivered as httpOnly cookies, OTP email verification, password reset, account lockout after repeated failed logins, and an ephemeral **guest login** (`POST /auth/guest`) that issues a short-lived, DB-less JWT for guests, capped at 2 chat sessions / 5 messages (enforced via claims in the guest's own token).
+- **Chat** (`apps/api-gateway/src/chat` + `apps/query-service/src/query`, `.../history`) — natural-language query parsing, phone matching, AI-generated recommendations, and SSE streaming (`GET /chat/stream`) for real-time responses.
+- **Phones** (`apps/phone-service`) — phone catalog CRUD and search, with admin-only write endpoints.
+- **Metrics** (`apps/api-gateway/src/metrics`) — Prometheus metrics exposed for Grafana dashboards.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## Linting & formatting
 
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```bash
+npm run lint
+npm run format
+```

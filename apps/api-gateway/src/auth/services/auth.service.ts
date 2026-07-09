@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { randomInt } from 'crypto';
+import { randomInt, randomUUID } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -107,6 +107,52 @@ export class AuthService {
       ...tokens,
     };
   }
+  guestLogin() {
+    const guestId = `guest_${randomUUID()}`;
+    const accessToken = this.jwtService.sign(
+      {
+        sub: guestId,
+        email: null,
+        role: 'guest',
+        tokenVersion: 0,
+        isGuest: true,
+        sessionCount: 0,
+        messageCount: 0,
+      },
+      {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        expiresIn: '24h',
+      },
+    );
+    this.metricsService.recordAuthEvent('login');
+    return {
+      user: { id: guestId, name: 'Guest', email: null, role: 'guest', isGuest: true },
+      accessToken,
+    };
+  }
+
+  signGuestToken(
+    guestId: string,
+    sessionCount: number,
+    messageCount: number,
+  ): string {
+    return this.jwtService.sign(
+      {
+        sub: guestId,
+        email: null,
+        role: 'guest',
+        tokenVersion: 0,
+        isGuest: true,
+        sessionCount,
+        messageCount,
+      },
+      {
+        secret: this.configService.get<string>('JWT_SECRET'),
+        expiresIn: '24h',
+      },
+    );
+  }
+
   async refreshTokens(userId: string, email: string, role: string) {
     const tokens = await this.generateTokens(userId, email, role);
     await this.userRepository.updateRefreshToken(userId, tokens.refreshToken);

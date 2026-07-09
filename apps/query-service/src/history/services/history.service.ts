@@ -32,9 +32,21 @@ export class HistoryService {
   }) {
     const message = await this.messageRepo.create(data as any);
 
+    // Title tracks the latest user message — assistant replies don't rename the chat
+    const title =
+      data.role === 'user'
+        ? data.content.length > 30
+          ? data.content.substring(0, 30) + '...'
+          : data.content
+        : undefined;
+
     // Session count update is best-effort — failure must not lose the message
     this.sessionRepo
-      .incrementMessageCount(data.sessionId, data.content.substring(0, 100))
+      .incrementMessageCount(
+        data.sessionId,
+        data.content.substring(0, 100),
+        title,
+      )
       .catch((err: unknown) => {
         this.logger.warn(
           `incrementMessageCount failed for session ${data.sessionId}: ${err instanceof Error ? err.message : String(err)}`,

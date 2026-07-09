@@ -4,10 +4,12 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ChatController } from './controllers/chat.controller';
 import { ChatService } from './services/chat.service';
 import { QUERY_QUEUE, PHONE_QUEUE, AI_QUEUE } from '@app/common';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     ConfigModule,
+    AuthModule,
     ClientsModule.registerAsync([
       // ─── Query Service Client ───────────────
       {

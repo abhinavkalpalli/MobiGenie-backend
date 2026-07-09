@@ -17,13 +17,18 @@ export class ChatSessionRepository extends BaseRepository<ChatSession> {
     return this.sessionModel.find({ userId }).sort({ createdAt: -1 }).exec();
   }
 
-  async incrementMessageCount(sessionId: string, lastMessage: string) {
+  async incrementMessageCount(
+    sessionId: string,
+    lastMessage: string,
+    title?: string,
+  ) {
     return this.sessionModel
       .findByIdAndUpdate(
         sessionId,
         {
           $inc: { messageCount: 1 },
           lastMessage: { content: lastMessage, at: new Date() },
+          ...(title ? { title } : {}),
         },
         { new: true },
       )

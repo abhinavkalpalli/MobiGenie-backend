@@ -70,6 +70,20 @@ export class ServiceUnavailableException extends HttpException {
   }
 }
 
+// When a guest exceeds their session/message allowance
+export class GuestLimitExceededException extends HttpException {
+  constructor(message: string) {
+    super(
+      {
+        statusCode: HttpStatus.FORBIDDEN,
+        error: 'GuestLimitExceeded',
+        message,
+      },
+      HttpStatus.FORBIDDEN,
+    );
+  }
+}
+
 // When RabbitMQ microservice fails
 export class MicroserviceException extends HttpException {
   constructor(message = 'Microservice error') {

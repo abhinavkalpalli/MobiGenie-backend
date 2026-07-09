@@ -21,6 +21,16 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
   async validate(payload: JwtPayload) {
+    if (payload.isGuest) {
+      return {
+        userId: payload.sub,
+        email: payload.email,
+        roles: payload.role,
+        isGuest: true,
+        sessionCount: payload.sessionCount ?? 0,
+        messageCount: payload.messageCount ?? 0,
+      };
+    }
     const user = await this.userRepository.findById(payload.sub);
     if (!user) {
       throw new UnauthorizedException('User not found');
