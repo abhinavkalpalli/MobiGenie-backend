@@ -21,6 +21,9 @@ async function bootstrap() {
 
   await app.startAllMicroservices();
   const port = process.env.PORT || 3002;
+  app.getHttpAdapter().get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+  });
   await app.listen(port);
   logger.log(`AI Service running on port ${port}`);
 }

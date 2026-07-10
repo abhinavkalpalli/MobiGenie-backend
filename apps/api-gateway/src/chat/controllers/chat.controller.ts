@@ -83,7 +83,6 @@ export class ChatController {
   }
 
   // POST /api/v1/chat/parse
-  // Just parse — for testing
   @Post('parse')
   @HttpCode(HttpStatus.OK)
   async parseQuery(@Body('query') query: string) {

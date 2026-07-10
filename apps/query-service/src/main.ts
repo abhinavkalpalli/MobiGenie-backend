@@ -31,6 +31,9 @@ async function bootstrap() {
 
   await app.startAllMicroservices();
   const port = process.env.PORT || 3001;
+  app.getHttpAdapter().get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+  });
   await app.listen(port);
   console.log(`Combined Query+Phone Service running on port ${port}`);
 }

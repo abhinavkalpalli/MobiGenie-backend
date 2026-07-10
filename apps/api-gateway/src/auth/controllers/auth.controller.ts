@@ -72,7 +72,10 @@ export class AuthController {
   @Throttle({ auth: { ttl: 60000, limit: 10 } })
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  async register(@Body() registerDto: RegisterDto, @Res({ passthrough: true }) res: Response) {
+  async register(
+    @Body() registerDto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.register(registerDto);
     if (result.accessToken && result.refreshToken) {
       this.setAuthCookies(res, result.accessToken, result.refreshToken);
@@ -87,7 +90,10 @@ export class AuthController {
   @Throttle({ auth: { ttl: 60000, limit: 10 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.login(loginDto);
     this.setAuthCookies(res, result.accessToken, result.refreshToken);
     const { accessToken, refreshToken, ...safeData } = result;
@@ -101,7 +107,10 @@ export class AuthController {
   @UseGuards(RefreshGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(@CurrentUser() user: JwtUser, @Res({ passthrough: true }) res: Response) {
+  async refresh(
+    @CurrentUser() user: JwtUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.refreshTokens(
       user.userId,
       user.email,
@@ -117,7 +126,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout(@CurrentUser() user: JwtUser, @Res({ passthrough: true }) res: Response) {
+  async logout(
+    @CurrentUser() user: JwtUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     if (!user.isGuest) {
       await this.authService.logout(user.userId);
     }
@@ -142,7 +154,10 @@ export class AuthController {
   @Throttle({ auth: { ttl: 60000, limit: 10 } })
   @Post('google')
   @HttpCode(HttpStatus.OK)
-  async googleLogin(@Body('idToken') idToken: string, @Res({ passthrough: true }) res: Response) {
+  async googleLogin(
+    @Body('idToken') idToken: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.googleLogin(idToken);
     this.setAuthCookies(res, result.accessToken, result.refreshToken);
     const { accessToken, refreshToken, ...safeData } = result;
@@ -157,7 +172,13 @@ export class AuthController {
     if (user.isGuest) {
       return {
         message: 'Guest profile retrieved successfully',
-        data: { id: user.userId, name: 'Guest', email: null, role: 'guest', isGuest: true },
+        data: {
+          id: user.userId,
+          name: 'Guest',
+          email: null,
+          role: 'guest',
+          isGuest: true,
+        },
       };
     }
     const result = await this.authService.getProfile(user.userId);
