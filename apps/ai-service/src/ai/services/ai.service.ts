@@ -40,17 +40,15 @@ export class AiService {
       };
 
       // Step 1 — Use provided phones OR find via RAG
-      const phonesToUse = request.phones;
+      let phonesToUse = request.phones;
 
       if (!phonesToUse || phonesToUse.length === 0) {
         this.logger.log('No phones provided — using RAG search');
-        const ragResults = await this.ragService.findRelevantPhones(
+        phonesToUse = await this.ragService.findRelevantPhoneDocs(
           request.query,
           5,
         );
-        this.logger.log(`RAG found ${ragResults.length} relevant phones`);
-        // Note: in production, fetch full phone data
-        // using phoneIds from ragResults
+        this.logger.log(`RAG found ${phonesToUse.length} relevant phones`);
       }
 
       // Step 2 — Build prompt
@@ -110,9 +108,16 @@ export class AiService {
         confidence: classification.confidence,
       };
 
-      const phonesToUse = request.phones?.length
-        ? request.phones
-        : [];
+      let phonesToUse = request.phones?.length ? request.phones : [];
+
+      if (phonesToUse.length === 0) {
+        this.logger.log('No phones provided — using RAG search');
+        phonesToUse = await this.ragService.findRelevantPhoneDocs(
+          request.query,
+          5,
+        );
+        this.logger.log(`RAG found ${phonesToUse.length} relevant phones`);
+      }
 
       const prompt = buildSuggestionPrompt(request.query, phonesToUse, enhancedFilters);
 
