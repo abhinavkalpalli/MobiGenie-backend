@@ -145,7 +145,7 @@ export class AiService {
   }
 
   // ─── Embed Text ──────────────────────────────
-  embed(text: string): number[] {
+  async embed(text: string): Promise<number[]> {
     return this.embeddingService.embedText(text);
   }
 

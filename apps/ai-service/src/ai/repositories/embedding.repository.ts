@@ -6,11 +6,14 @@ import {
   PhoneEmbedding,
   PhoneEmbeddingDocument,
 } from '@app/database';
-import { EmbeddingService } from '../services/embedding.service';
+import {
+  EmbeddingService,
+  EMBEDDING_MODEL,
+} from '../services/embedding.service';
 
 @Injectable()
 export class EmbeddingRepository extends BaseRepository<PhoneEmbedding> {
-  private static readonly VECTOR_INDEX_NAME = 'phone_embedding_vector_index';
+  private static readonly VECTOR_INDEX_NAME = 'vector_index';
   private readonly logger = new Logger(EmbeddingRepository.name);
 
   constructor(
@@ -31,10 +34,17 @@ export class EmbeddingRepository extends BaseRepository<PhoneEmbedding> {
     if (existing) {
       existing.embedding = embedding;
       existing.embeddingText = embeddingText;
+      existing.embeddingModel = EMBEDDING_MODEL;
       return existing.save();
     }
 
-    return this.model.create({ phoneId, phoneName, embeddingText, embedding });
+    return this.model.create({
+      phoneId,
+      phoneName,
+      embeddingText,
+      embedding,
+      embeddingModel: EMBEDDING_MODEL,
+    });
   }
 
   async findSimilar(

@@ -1,24 +1,43 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import type { FeatureExtractionPipeline } from '@xenova/transformers';
+
+export const EMBEDDING_MODEL = 'Xenova/all-MiniLM-L6-v2';
+export const EMBEDDING_DIMENSIONS = 384;
 
 @Injectable()
-export class EmbeddingService {
+export class EmbeddingService implements OnModuleInit {
   private readonly logger = new Logger(EmbeddingService.name);
+  private embedder: FeatureExtractionPipeline | null = null;
+  private loadingPromise: Promise<FeatureExtractionPipeline> | null = null;
 
-  // Simple local embedding using TF-IDF style
-  // (no API needed)
-  embedText(text: string): number[] {
-    const words = text.toLowerCase().split(/\s+/);
-    const vector: number[] = new Array<number>(128).fill(0);
+  async onModuleInit() {
+    // Warm the model at boot so the first real request isn't the one paying
+    // the download/load cost.
+    await this.getEmbedder();
+  }
 
-    words.forEach((word, index) => {
-      const hash = this.hashWord(word);
-      vector[hash % 128] += 1 / (index + 1);
-    });
+  private async getEmbedder(): Promise<FeatureExtractionPipeline> {
+    if (this.embedder) return this.embedder;
+    if (!this.loadingPromise) {
+      this.logger.log(`Loading embedding model: ${EMBEDDING_MODEL}...`);
+      const { pipeline } = await import('@xenova/transformers');
+      this.loadingPromise = pipeline('feature-extraction', EMBEDDING_MODEL).then(
+        (p) => {
+          this.embedder = p as FeatureExtractionPipeline;
+          this.logger.log('✅ Embedding model ready');
+          return this.embedder;
+        },
+      );
+    }
+    return this.loadingPromise;
+  }
 
-    // Normalize
-    const magnitude = Math.sqrt(vector.reduce((sum, v) => sum + v * v, 0));
-
-    return magnitude > 0 ? vector.map((v) => v / magnitude) : vector;
+  // Real semantic embedding via a trained sentence-transformer model
+  // (all-MiniLM-L6-v2, 384 dimensions, runs locally — no external API call)
+  async embedText(text: string): Promise<number[]> {
+    const embedder = await this.getEmbedder();
+    const output = await embedder(text, { pooling: 'mean', normalize: true });
+    return Array.from(output.data as Float32Array);
   }
 
   // Build embedding text for a phone
@@ -51,15 +70,5 @@ export class EmbeddingService {
     );
     if (magnitudeA === 0 || magnitudeB === 0) return 0;
     return dotProduct / (magnitudeA * magnitudeB);
-  }
-
-  // Simple hash function
-  private hashWord(word: string): number {
-    let hash = 0;
-    for (let i = 0; i < word.length; i++) {
-      hash = (hash << 5) - hash + word.charCodeAt(i);
-      hash |= 0;
-    }
-    return Math.abs(hash);
   }
 }

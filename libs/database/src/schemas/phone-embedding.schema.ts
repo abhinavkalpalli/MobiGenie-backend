@@ -17,7 +17,7 @@ export class PhoneEmbedding {
   @Prop({ type: [Number], required: true })
   embedding!: number[];
 
-  @Prop({ default: 'text-embedding-ada-002' })
+  @Prop({ default: 'Xenova/all-MiniLM-L6-v2' })
   embeddingModel!: string;
 }
 

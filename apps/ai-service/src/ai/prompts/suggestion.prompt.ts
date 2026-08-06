@@ -35,6 +35,19 @@ ${i + 1}. ${p.name} (${p.brand})
     .map(([k, v]) => `${k}: ${String(v)}`)
     .join(', ');
 
+  // TensorFlow intent classification — surfaced separately from the
+  // regex-extracted filters above, since it's a soft signal about the
+  // *kind* of request, not a hard search constraint.
+  const intentCategory = filters.intentCategory as string | undefined;
+  const intentTags = filters.intentTags as string[] | undefined;
+  const confidence = filters.confidence as number | undefined;
+  const intentLine =
+    intentCategory && intentCategory !== 'general'
+      ? `Detected Intent: ${intentCategory}${
+          intentTags?.length ? ` (related to: ${intentTags.join(', ')})` : ''
+        }${confidence ? ` — ${Math.round(confidence * 100)}% confidence` : ''}`
+      : null;
+
   // No phones found AND no real search filters extracted → the user probably
   // isn't asking for a recommendation at all (greeting, small talk, off-topic).
   // Don't force a "search results" framing onto a reply to "hi".
@@ -59,7 +72,7 @@ You are MobiGenie, an expert mobile phone advisor.
 The user is looking for a phone with these requirements:
 
 User Query: "${query}"
-Extracted Filters: ${filterSummary || 'No specific filters'}
+Extracted Filters: ${filterSummary || 'No specific filters'}${intentLine ? `\n${intentLine}` : ''}
 
 Here are the available phones matching their criteria:
 

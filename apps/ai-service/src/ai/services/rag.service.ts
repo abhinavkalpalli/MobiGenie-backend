@@ -26,7 +26,7 @@ export class RagService {
           this.embeddingService.buildPhoneEmbeddingText(phone);
 
         // Generate embedding
-        const embedding = this.embeddingService.embedText(embeddingText);
+        const embedding = await this.embeddingService.embedText(embeddingText);
 
         // Save to DB
         await this.embeddingRepository.savePhoneEmbedding(
@@ -54,7 +54,7 @@ export class RagService {
     this.logger.log(`RAG search for: "${query}"`);
 
     // Embed the query
-    const queryEmbedding = this.embeddingService.embedText(query);
+    const queryEmbedding = await this.embeddingService.embedText(query);
 
     // Find similar phones
     const similar = await this.embeddingRepository.findSimilar(
