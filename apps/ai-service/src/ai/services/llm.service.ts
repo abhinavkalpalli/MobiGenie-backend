@@ -12,7 +12,7 @@ export class LlmService {
   constructor(private readonly configService: ConfigService) {
     this.llm = new ChatGroq({
       apiKey: this.configService.get<string>('GROQ_API_KEY'),
-      model: 'llama-3.1-8b-instant',
+      model: 'openai/gpt-oss-20b',
       temperature: 0.7,
       maxTokens: 1000,
     });
