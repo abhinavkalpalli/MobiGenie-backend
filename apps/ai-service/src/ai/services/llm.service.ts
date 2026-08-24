@@ -4,6 +4,15 @@ import { ChatGroq } from '@langchain/groq';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { Channel } from 'amqplib';
 
+const FORMAT_SYSTEM_PROMPT =
+  'You are MobiGenie, a helpful mobile phone advisor. ' +
+  'Give concise, helpful recommendations. ' +
+  'Format your entire response in clean, standard GitHub-flavored Markdown: ' +
+  'use "- " for bullet points (never "•" or other bullet characters), ' +
+  'use "**bold**" for emphasis, use "#"-style headings, and use proper ' +
+  'GFM pipe-table syntax with a header separator row when presenting ' +
+  'comparisons. Do not use non-standard bullet symbols or emoji as list markers.';
+
 @Injectable()
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
@@ -27,10 +36,7 @@ export class LlmService {
       this.logger.log('Generating response via Groq...');
 
       const response = await this.llm.invoke([
-        new SystemMessage(
-          'You are MobiGenie, a helpful mobile phone advisor. ' +
-            'Give concise, helpful recommendations.',
-        ),
+        new SystemMessage(FORMAT_SYSTEM_PROMPT),
         new HumanMessage(prompt),
       ]);
 
@@ -57,10 +63,7 @@ export class LlmService {
     try {
       this.logger.log('Streaming response to reply queue...');
       const stream = await this.llm.stream([
-        new SystemMessage(
-          'You are MobiGenie, a helpful mobile phone advisor. ' +
-            'Give concise, helpful recommendations.',
-        ),
+        new SystemMessage(FORMAT_SYSTEM_PROMPT),
         new HumanMessage(prompt),
       ]);
 
@@ -101,10 +104,7 @@ export class LlmService {
       this.logger.log('Streaming response via Groq...');
 
       const stream = await this.llm.stream([
-        new SystemMessage(
-          'You are MobiGenie, a helpful mobile phone advisor. ' +
-            'Give concise, helpful recommendations.',
-        ),
+        new SystemMessage(FORMAT_SYSTEM_PROMPT),
         new HumanMessage(prompt),
       ]);
 
