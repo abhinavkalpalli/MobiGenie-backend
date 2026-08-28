@@ -67,6 +67,14 @@ export class RagService {
     return similar;
   }
 
+  // Vector search against a pre-computed embedding (used by the raw RPC endpoint)
+  async findSimilarByEmbedding(
+    embedding: number[],
+    limit: number = 5,
+  ): Promise<{ phoneId: string; score: number }[]> {
+    return this.embeddingRepository.findSimilar(embedding, limit);
+  }
+
   // Find relevant phones and return full documents, ready for the LLM prompt
   async findRelevantPhoneDocs(query: string, limit: number = 5): Promise<any[]> {
     const similar = await this.findRelevantPhones(query, limit);

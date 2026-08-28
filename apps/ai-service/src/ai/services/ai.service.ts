@@ -156,7 +156,7 @@ export class AiService {
 
   // ─── Vector Search ───────────────────────────
   async vectorSearch(embedding: number[], limit: number = 5) {
-    return this.ragService['embeddingRepository'].findSimilar(embedding, limit);
+    return this.ragService.findSimilarByEmbedding(embedding, limit);
   }
 
   // ─── Fallback Response ───────────────────────

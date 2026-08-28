@@ -7,18 +7,17 @@ import { RagService } from './services/rag.service';
 import { LlmService } from './services/llm.service';
 import { EmbeddingService } from './services/embedding.service';
 import { EmbeddingRepository } from './repositories/embedding.repository';
-import { PhoneEmbedding, PhoneEmbeddingSchema, Phone, PhoneSchema } from '@app/database';
+import { Phone, PhoneSchema } from '@app/database';
 import { TensorflowModule } from '../tensorflow/tensorflow.module';
 import { PhoneIndexBootstrap } from './services/phone-index.bootstrap';
+import { PineconeModule } from './pinecone/pinecone.module';
 
 @Module({
   imports: [
     ConfigModule,
-    MongooseModule.forFeature([
-      { name: PhoneEmbedding.name, schema: PhoneEmbeddingSchema },
-      { name: Phone.name, schema: PhoneSchema },
-    ]),
+    MongooseModule.forFeature([{ name: Phone.name, schema: PhoneSchema }]),
     TensorflowModule,
+    PineconeModule,
   ],
   controllers: [AiController],
   providers: [
